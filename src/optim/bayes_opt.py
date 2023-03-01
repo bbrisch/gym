@@ -1,11 +1,15 @@
 # Script con funciones para optimización bayesiana
 # @Author: Benjamín Brito
 
+import os
 import torch
+
 import torch.nn as nn
+import numpy as np
 
 from tqdm import tqdm
 from CONTAC_transformers import Master, Datos_RAM
+from ax.service.managed_loop import optimize
 
 
 # Función de entrenameinto estádar para transformers
@@ -34,22 +38,6 @@ def net_train(model, train_loader, parameters, silent=True, loss=nn.MSELoss()):
             optim.zero_grad()
             perdida.backward()
             optim.step()
-
-        #   # Enmascaramiento de la entrada
-        #   for _ in range(parameters.get('realizaciones', 0)):
-        #       # Generación de la máscara
-        #       mascara = torch.bernoulli(parameters.get('probabilidad', 2/3)*torch.ones(ejemplo.shape)).float().to(device)
-        #       ejemplo_m = ejemplo*mascara
-
-        #       # Cálculo de la pérdida
-        #       output = model(ejemplo_m)
-        #       perdida = loss(output,respuesta)
-        #       cumulative_loss.append(perdida.item())
-
-        #       # Backprop
-        #       optim.zero_grad()
-        #       perdida.backward()
-        #       optim.step()
 
     return model
 
@@ -80,26 +68,18 @@ def net_eval(model, val_loader, parameters, silent=True, loss=nn.MSELoss()):
 
 # Función que inicializa y entrega una red sin entrenar
 def init_net(parameterization):
+
+    model_parameters = {
+        param: parameterization.get(param)
+        for param in parameterization.get("model_parameters").split()
+    }
+
     # Generamos un modelo
     m = (
         Master()
     )  # Se genera un modelo con la estructura predeterminada y prámetros por tunear
 
-    m.estructura(
-        parameterization.get("name"),
-        **{
-            "model": "pred",
-            "seq_leng": 5,
-            "target_features": 1,
-            "target_leng": 1,
-            "in_features": 23,
-            "pdrop": 0.2,
-            "model_features": parameterization.get("model_features"),
-            "h_features": parameterization.get("h_features"),
-            "n_heads": parameterization.get("n_heads", 1),
-            "n_layers": parameterization.get("n_layers"),
-        },
-    )
+    m.estructura(parameterization.get("name"), **model_parameters)
     return m.arq  # Retorna la red sin entrenar
 
 
@@ -112,10 +92,16 @@ def train_evaluate(parameterization):
 
     # Generamos los dataloaders
     dataload_train = torch.utils.data.DataLoader(
-        dataset_train, batch_size=parameterization.get("batch", 512), shuffle=True
+        dataset_train,
+        batch_size=parameterization.get("batch", 512),
+        shuffle=True,
+        num_workers=2,
     )
     dataload_val = torch.utils.data.DataLoader(
-        dataset_val, batch_size=parameterization.get("batch", 512), shuffle=False
+        dataset_val,
+        batch_size=parameterization.get("batch", 512),
+        shuffle=False,
+        num_workers=2,
     )
 
     # Get neural net
@@ -130,3 +116,145 @@ def train_evaluate(parameterization):
     return net_eval(
         model=trained_net, val_loader=dataload_val, parameters=parameterization
     )
+
+
+# Función que maneja el pipeline y optimiza. Esta va a ser llamada por el bot
+def tune_model(parameterization):
+
+    best_parameters, values, experiment, model = optimize(
+        parameters=parameterization,
+        evaluation_function=train_evaluate,
+        objective_name="validation_loss",
+        minimize=True,
+        total_trials=10,
+    )
+    for d in parameterization:
+        if d["name"] == "id":
+            id = d["value"]
+            break
+
+    # print('path:',path)
+    if not os.path.exists("resultados\experimentos/" + id):
+        os.makedirs("resultados\experimentos/" + id)
+
+    torch.save(values, "resultados\experimentos/" + id + "/values.pt")
+    torch.save(experiment, "resultados\experimentos/" + id + "/experiment.pt")
+    torch.save(model, "resultados\experimentos/" + id + "/model.pt")
+    torch.save(best_parameters, "resultados\experimentos/" + id + "/h_params.pt")
+
+
+if __name__ == "__main__":
+    print("Gargando datos...")
+    path = ""
+    id = 4
+
+    parameters = [
+        # parámetros del experimento
+        {"name": "id", "type": "fixed", "value": f"{id}", "value_type": "str"},
+        {
+            "name": "datos",
+            "type": "fixed",
+            "value": f"{path}/datos",
+            "value_type": "str",
+        },
+        # Parámetros fijos del entrenameinto
+        {
+            "name": "train_parameters",  # Lista con parámetros de entrenamiento
+            "type": "fixed",
+            "value": "device",
+            "value_type": "str",
+        },
+        {
+            "name": "type",
+            "type": "fixed",
+            "value": "std",
+            "value_type": "str",
+        },  # Tipo de entrenamiento
+        {"name": "device", "type": "fixed", "value": "cuda", "value_type": "str"},
+        {"name": "epochs", "type": "fixed", "value": 5, "value_type": "int"},
+        # Parámetros adaptables del entrenamiento
+        {
+            "name": "lr",
+            "type": "range",
+            "bounds": [1e-6, 0.01],
+            "log_scale": True,
+            "value_type": "float",
+        },
+        {
+            "name": "batch",
+            "type": "choice",
+            "values": [2**6, 2**7, 2**8, 2**9],
+            "value_type": "int",
+            "is_ordered": True,
+        },
+        # Parámetros del modelo
+        {
+            "name": "model_parameters",  # Lista con parámetros del modelo
+            "type": "fixed",
+            "value": "model seq_leng target_features target_leng in_features pdrop model_features h_features n_heads n_layers",
+            "value_type": "str",
+        },
+        {
+            "name": "name",  # Nombre del modelo
+            "type": "fixed",
+            "value": f"resultados/experimentos/{id}",
+            "value_type": "str",
+        },
+        # parámetros fijos (dependen del problema y arquitectura a usar)
+        {
+            "name": "model",
+            "type": "fixed",
+            "value": f"pred",
+            "value_type": "str",
+        },
+        {
+            "name": "seq_leng",
+            "type": "fixed",
+            "value": 1,
+            "value_type": "int",
+        },
+        {
+            "name": "target_features",
+            "type": "fixed",
+            "value": 1,
+            "value_type": "int",
+        },
+        {
+            "name": "target_leng",
+            "type": "fixed",
+            "value": 1,
+            "value_type": "int",
+        },
+        {
+            "name": "in_features",
+            "type": "fixed",
+            "value": 1,
+            "value_type": "int",
+        },
+        {
+            "name": "pdrop",
+            "type": "fixed",
+            "value": 1,
+            "value_type": "int",
+        },
+        # Parámetros del modelo a optimizar
+        {
+            "name": "model_features",
+            "type": "range",
+            "bounds": [40, 60],
+            "value_type": "int",
+        },
+        {
+            "name": "h_features",
+            "type": "range",
+            "bounds": [50, 60],
+            "value_type": "int",
+        },
+        {"name": "n_layers", "type": "range", "bounds": [4, 8], "value_type": "int"},
+        {"name": "n_heads", "type": "range", "bounds": [1, 10], "value_type": "int"},
+    ]
+
+    path_save = ""
+    print("Guardando datos...")
+    np.save(path + f"{id}.npy", parameters, allow_pickle=True)
+    print("¡Datos guardados!")
