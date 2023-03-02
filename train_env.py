@@ -25,7 +25,7 @@ def main(
     # Iteramos entrenanando modelos
     for i, (exp, mod, ep) in enumerate(zip(experiment, model, epochs)):
         print("\n")
-        print(f"ITER {i} | EXPERIMENTO {exp} | MODELO {mod} | EPOCHS {ep}")
+        print(f"\tITER {i} | EXPERIMENTO {exp} | MODELO {mod} | EPOCHS {ep}")
         if not os.path.exists(
             f"resultados/experimemtos/{exp}"
         ):  # Caso en el que no existe la experiencia
@@ -48,12 +48,30 @@ if __name__ == "__main__":
     argParser = argparse.ArgumentParser()
 
     # Se añaden argumentos al parser
-    argParser.add_argument("-e", required=True)
-    argParser.add_argument("-m", required=False)
-    argParser.add_argument("-ep", required=False)
-    argParser.add_argument("-t", required=False)
-    argParser.add_argument("-p", required=False)
-    argParser.add_argument("-s", required=False)
+    argParser.add_argument(
+        "-e", required=True, help="Nombres de los experimentos a realizar."
+    )
+    argParser.add_argument(
+        "-m", required=False, help="Nombre de los modelos a entrenar (opcional)."
+    )
+    argParser.add_argument(
+        "-ep", required=False, help="Épocas de cada entrenamiento (opcional)"
+    )
+    argParser.add_argument(
+        "-t",
+        required=False,
+        help="Parámetro de tolerancia para el early stopping (opcional).",
+    )
+    argParser.add_argument(
+        "-p",
+        required=False,
+        help="Parámetro de paciencia para el early stopping (opcional).",
+    )
+    argParser.add_argument(
+        "-s",
+        required=False,
+        help="Paámetro que contola el display de barras de carga (1 -> No hay barra)(opcional)",
+    )
 
     args = argParser.parse_args()
     args = vars(args)
