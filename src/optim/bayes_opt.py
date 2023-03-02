@@ -13,7 +13,7 @@ from ax.service.managed_loop import optimize
 
 
 # Función de entrenameinto estádar para transformers
-def net_train(model, train_loader, parameters, silent=True, loss=nn.MSELoss()):
+def net_train(model, train_loader, parameters, silent=False, loss=nn.MSELoss()):
 
     optim = torch.optim.Adam(model.parameters(), lr=parameters.get("lr", 0.001))
     device = parameters.get("device", "cpu")
@@ -43,7 +43,7 @@ def net_train(model, train_loader, parameters, silent=True, loss=nn.MSELoss()):
 
 
 # Función que evalúa el modelo y retorna el promedio de la función de pérdida en los batches
-def net_eval(model, val_loader, parameters, silent=True, loss=nn.MSELoss()):
+def net_eval(model, val_loader, parameters, silent=False, loss=nn.MSELoss()):
 
     device = parameters.get("device", "cpu")
     model.to(device)
@@ -126,7 +126,7 @@ def tune_model(parameterization):
         evaluation_function=train_evaluate,
         objective_name="validation_loss",
         minimize=True,
-        total_trials=10,
+        total_trials=1,
     )
     for d in parameterization:
         if d["name"] == "id":
@@ -145,8 +145,8 @@ def tune_model(parameterization):
 
 if __name__ == "__main__":
     print("Gargando datos...")
-    path = ""
-    id = 4
+    path_data = "C:/Users/CAEX/Documents/Archivos_Martín/Anglo_CF/gym-dev/datos"
+    id = 0
 
     parameters = [
         # parámetros del experimento
@@ -154,7 +154,7 @@ if __name__ == "__main__":
         {
             "name": "datos",
             "type": "fixed",
-            "value": f"{path}/datos",
+            "value": f"{path_data}",
             "value_type": "str",
         },
         # Parámetros fijos del entrenameinto
@@ -176,14 +176,14 @@ if __name__ == "__main__":
         {
             "name": "lr",
             "type": "range",
-            "bounds": [1e-6, 0.01],
+            "bounds": [1e-6, 1e-3],
             "log_scale": True,
             "value_type": "float",
         },
         {
             "name": "batch",
             "type": "choice",
-            "values": [2**6, 2**7, 2**8, 2**9],
+            "values": [2**7, 2**8, 2**9, 2**10],
             "value_type": "int",
             "is_ordered": True,
         },
@@ -204,37 +204,37 @@ if __name__ == "__main__":
         {
             "name": "model",
             "type": "fixed",
-            "value": f"pred",
+            "value": "pred",
             "value_type": "str",
         },
         {
             "name": "seq_leng",
             "type": "fixed",
-            "value": 1,
+            "value": 60,
             "value_type": "int",
         },
         {
             "name": "target_features",
             "type": "fixed",
-            "value": 1,
+            "value": 2,
             "value_type": "int",
         },
         {
             "name": "target_leng",
             "type": "fixed",
-            "value": 1,
+            "value": 30,
             "value_type": "int",
         },
         {
             "name": "in_features",
             "type": "fixed",
-            "value": 1,
+            "value": 20,
             "value_type": "int",
         },
         {
             "name": "pdrop",
             "type": "fixed",
-            "value": 1,
+            "value": 0.2,
             "value_type": "int",
         },
         # Parámetros del modelo a optimizar
@@ -247,14 +247,14 @@ if __name__ == "__main__":
         {
             "name": "h_features",
             "type": "range",
-            "bounds": [50, 60],
+            "bounds": [60, 80],
             "value_type": "int",
         },
         {"name": "n_layers", "type": "range", "bounds": [4, 8], "value_type": "int"},
-        {"name": "n_heads", "type": "range", "bounds": [1, 10], "value_type": "int"},
+        {"name": "n_heads", "type": "range", "bounds": [1, 5], "value_type": "int"},
     ]
 
-    path_save = ""
+    path_save = "C:/Users/CAEX/Documents/Archivos_Martín/Anglo_CF/gym-dev/resultados/templates"
     print("Guardando datos...")
-    np.save(path + f"{id}.npy", parameters, allow_pickle=True)
+    np.save(path_save + f"/{id}.npy", parameters, allow_pickle=True)
     print("¡Datos guardados!")

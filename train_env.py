@@ -4,6 +4,7 @@ import argparse
 import os
 import src
 import numpy as np
+import torch
 
 # Función que entrena los valores de la función
 def main(
@@ -24,21 +25,22 @@ def main(
 
     # Iteramos entrenanando modelos
     for i, (exp, mod, ep) in enumerate(zip(experiment, model, epochs)):
-        print("\n")
-        print(f"\tITER {i} | EXPERIMENTO {exp} | MODELO {mod} | EPOCHS {ep}")
+        # print("\n")
+        print(f"\tITER {i} | EXPERIMENTO {exp} | MODELO {mod} | EPOCHS {ep}\n")
+
         if not os.path.exists(
-            f"resultados/experimemtos/{exp}"
+            f"resultados/experimentos/{exp}"
         ):  # Caso en el que no existe la experiencia
             parameters = np.load(f"resultados/templates/{exp}.npy", allow_pickle=True)
+            print('Tuing')
             src.tune_model(parameters)
 
         if not mod is None:
             parameters = np.load(f"resultados/templates/{exp}.npy", allow_pickle=True)
-            best_params = np.load(
-                f"resultados/experimentos/{exp}.npy", allow_pickle=True
-            )
+            best_params = torch.load(
+                f"resultados/experimentos/{exp}/h_params.pt")
 
-            src.train_with_params(
+            src.train_with_params(name,
                 parameters, best_params, ep, tolerancia, paciencia, silent
             )
 
