@@ -119,14 +119,14 @@ def train_evaluate(parameterization):
 
 
 # Función que maneja el pipeline y optimiza. Esta va a ser llamada por el bot
-def tune_model(parameterization):
+def tune_model(parameterization, trials):
 
     best_parameters, values, experiment, model = optimize(
         parameters=parameterization,
         evaluation_function=train_evaluate,
         objective_name="validation_loss",
         minimize=True,
-        total_trials=1,
+        total_trials=trials,
     )
     for d in parameterization:
         if d["name"] == "id":
@@ -254,7 +254,9 @@ if __name__ == "__main__":
         {"name": "n_heads", "type": "range", "bounds": [1, 5], "value_type": "int"},
     ]
 
-    path_save = "C:/Users/CAEX/Documents/Archivos_Martín/Anglo_CF/gym-dev/resultados/templates"
+    path_save = (
+        "C:/Users/CAEX/Documents/Archivos_Martín/Anglo_CF/gym-dev/resultados/templates"
+    )
     print("Guardando datos...")
     np.save(path_save + f"/{id}.npy", parameters, allow_pickle=True)
     print("¡Datos guardados!")

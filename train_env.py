@@ -8,7 +8,13 @@ import torch
 
 # Función que entrena los valores de la función
 def main(
-    experiment, model=None, epochs=None, tolerancia=None, paciencia=0, silent=False
+    experiment,
+    model=None,
+    epochs=None,
+    tolerancia=np.inf,
+    paciencia=0,
+    silent=False,
+    trials=10,
 ):
 
     if not model:  # Caso en el que el modelo sea None o Lista vaciía
@@ -33,14 +39,14 @@ def main(
         ):  # Caso en el que no existe la experiencia
             parameters = np.load(f"resultados/templates/{exp}.npy", allow_pickle=True)
             print("Tuing")
-            src.tune_model(parameters)
+            src.tune_model(parameters, trials)
 
         if not mod is None:
             parameters = np.load(f"resultados/templates/{exp}.npy", allow_pickle=True)
             best_params = torch.load(f"resultados/experimentos/{exp}/h_params.pt")
 
             src.train_with_params(
-                "resultados/modeloss/" + model,
+                "resultados/modelos/" + model,
                 parameters,
                 best_params,
                 ep,
@@ -77,7 +83,12 @@ if __name__ == "__main__":
     argParser.add_argument(
         "-s",
         required=False,
-        help="Paámetro que contola el display de barras de carga (1 -> No hay barra)(opcional)",
+        help="Parámetro que contola el display de barras de carga (1 -> No hay barra)(opcional)",
+    )
+    argParser.add_argument(
+        "-tr",
+        required=False,
+        help="Parámetro que ajusta la cantidad de trials al momento de optimizar (opcional).\n Deben ser estríctamente menos de 20.\n Por defecto son 10.",
     )
 
     args = argParser.parse_args()
@@ -100,6 +111,7 @@ if __name__ == "__main__":
         "t": "tolerancia",
         "p": "paciencia",
         "s": "silent",
+        "tr": "trials",
     }
     for k, v in trad.items():
         if args[k] is None:
