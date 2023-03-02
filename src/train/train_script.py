@@ -6,7 +6,7 @@ import numpy as np
 from CONTAC_transformers import Master
 
 
-def train_with_params(
+def train_with_params(name,
     exp, best_params, epochs, tolerancia=np.inf, paciencia=0, silent=False
 ):
 
@@ -22,9 +22,6 @@ def train_with_params(
     train_kwargs = dict()
 
     for item in exp:
-        if item["name"] == "name":
-            name = item["value"]
-            continue
         if item["name"] == "type":
             train_type = item["value"]
             continue
@@ -52,12 +49,14 @@ def train_with_params(
         if k in model_kwargs.keys():
             model_kwargs[k] = v
 
-        if k in train_kwargs.heys():
+        if k in train_kwargs.keys():
             train_kwargs[k] = v
 
     # Iniciamos el modelo y el entrenamiento
     m = Master()
     m.estructura(name, **model_kwargs)
+    # Enviamos el modelo al dispositivo correpsonidente
+    m.arq.to(train_kwargs['device'])
 
     # Actualizamos los prámetros de entrenamiento
     train_kwargs["loss"] = torch.nn.MSELoss()
