@@ -7,7 +7,7 @@ from CONTAC_transformers import Master
 
 
 def train_with_params(
-    exp, best_params, epochs, tolerancia=np.inf, paciencia=0, silent=False
+    name, exp, best_params, epochs, tolerancia=np.inf, paciencia=0, silent=False
 ):
 
     # buscamos en el experimento los prámetros del modelo y los emjores parámetros
@@ -22,9 +22,9 @@ def train_with_params(
     train_kwargs = dict()
 
     for item in exp:
-        if item["name"] == "name":
-            name = item["value"]
-            continue
+        # if item["name"] == "name":
+        #     name = item["value"]
+        #     continue
         if item["name"] == "type":
             train_type = item["value"]
             continue
@@ -52,12 +52,13 @@ def train_with_params(
         if k in model_kwargs.keys():
             model_kwargs[k] = v
 
-        if k in train_kwargs.heys():
+        if k in train_kwargs.keys():
             train_kwargs[k] = v
 
     # Iniciamos el modelo y el entrenamiento
     m = Master()
     m.estructura(name, **model_kwargs)
+    m.arq.to(train_kwargs["device"])
 
     # Actualizamos los prámetros de entrenamiento
     train_kwargs["loss"] = torch.nn.MSELoss()
@@ -68,7 +69,5 @@ def train_with_params(
     train_kwargs["silent"] = silent
 
     m.entrenar_modelo(data, best_params["batch"], train_type, **train_kwargs)
-
-    m.load_model()
 
     return 0

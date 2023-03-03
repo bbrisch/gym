@@ -46,7 +46,7 @@ def main(
             best_params = torch.load(f"resultados/experimentos/{exp}/h_params.pt")
 
             src.train_with_params(
-                "resultados/modelos/" + model,
+                "resultados/modelos/" + mod,
                 parameters,
                 best_params,
                 ep,
